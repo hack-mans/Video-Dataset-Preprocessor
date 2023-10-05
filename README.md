@@ -12,7 +12,7 @@ Menu:
 - 5 Exit
 
 ## Instructions
-Requires FFPMEG so make sure you have installed a version locally.
+Requires FFMPEG so make sure you have installed a version locally.
 https://ffmpeg.org/download.html
 
 - From Command Line, clone the repo and setup the virtual environment
