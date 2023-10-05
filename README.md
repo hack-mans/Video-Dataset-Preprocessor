@@ -5,11 +5,11 @@ Python environment + script for preprocessing video files into scenes with capti
 Also featuring the ability to amend caption files to add new text as prefix or suffix, and automatically crop and resize video clips into 576x320 and 1024x576 resolutions.
 
 Menu:
-- 1. Process a video file into scenes with captions
-- 2. Generate captions for a folder of images
-- 3. Amend existing captions with new text
-- 4. Resize and crop images and videos
-- 5. Exit
+- 1 Process a video file into scenes with captions
+- 2 Generate captions for a folder of images
+- 3 Amend existing captions with new text
+- 4 Resize and crop images and videos
+- 5 Exit
 
 ## Instructions
 Requires FFPMEG so make sure you have installed a version locally.
