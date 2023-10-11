@@ -1,6 +1,7 @@
 # Video-Dataset-Preprocessor
 
-Python environment + script for preprocessing video files into scenes with captions (using BLIP2 - https://huggingface.co/Salesforce/blip2-opt-2.7b - requires ~13GB VRAM).
+Python environment + script for preprocessing video files into scenes with captions
+(using BLIP2 - https://huggingface.co/Salesforce/blip2-opt-2.7b - requires ~13GB VRAM).
 Also featuring the ability to amend caption files to add new text as prefix or suffix, and automatically crop and resize video clips into 576x320 and 1024x576 resolutions.
 
 Menu:
@@ -14,7 +15,8 @@ Menu:
 - 0 Exit
 
 ## Instructions
-Requires FFPMEG so make sure you have installed a version locally.
+Requires FFMPEG so make sure you have installed a version locally.
+https://ffmpeg.org/download.html
 
 - From Command Line, clone the repo and setup the virtual environment
 ```
@@ -30,7 +32,7 @@ pip install DeepImageSearch --upgrade
 pip install --upgrade termcolor
 ```
 - Place video files in root directory
-- Run the python script and provide the file paths when asked
+- Run the python script and provide the file names / paths when asked
 ```
 python ProcessDataset.py
 ```
