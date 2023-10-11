@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import shutil
 
 from scenedetect import open_video, SceneManager, split_video_ffmpeg
 from scenedetect.detectors import ContentDetector
@@ -9,6 +10,8 @@ from scenedetect.scene_manager import save_images
 from PIL import Image
 from transformers import AutoProcessor, Blip2ForConditionalGeneration
 import torch
+from termcolor import colored, cprint
+from DeepImageSearch import Load_Data, Search_Setup
 
 
 def create_subfolders(root_folder, subfolder_names):
@@ -96,6 +99,25 @@ def amend_captions(folder_location, text_to_append, append_position):
         print(f"An error occurred: {str(e)}")
 
 
+def check_captions(directory):
+    # Get a list of all files in the directory
+    files = os.listdir(directory)
+
+    # Filter out all png files
+    png_files = [f for f in files if f.endswith('.png')]
+
+    missing_txt_files = []
+
+    for png_file in png_files:
+        # Create the corresponding txt filename
+        txt_file = png_file.replace('.png', '.txt')
+
+        if txt_file not in files:
+            missing_txt_files.append(png_file)
+
+    return missing_txt_files
+
+
 def resize_and_crop(input_folder, output_folder, target_resolution):
     # Ensure the output folder exists
     os.makedirs(output_folder, exist_ok=True)
@@ -125,6 +147,74 @@ def resize_and_crop(input_folder, output_folder, target_resolution):
             print(f"Error processing {input_path}: {e}")
 
 
+def move_duplicate_files(input_folder, compare_folder, output_folder):
+    """
+     Move files from compare_folder to output_folder if they have a matching filename
+     in input_folder.
+
+     Parameters:
+         input_folder (str): The path to the input folder.
+         compare_folder (str): The path to the folder whose files are to be compared/moved.
+         output_folder (str): The path to the output folder.
+     """
+
+    try:
+        # Ensure the output folder exists
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
+        # Get list of filenames in input folder
+        input_filenames = set(os.listdir(input_folder))
+
+        # Iterate through all files in compare folder
+        for filename in os.listdir(compare_folder):
+            # If filename is in input_filenames, move it to output folder
+            if filename in input_filenames:
+                src_path = os.path.join(compare_folder, filename)
+                dst_path = os.path.join(output_folder, filename)
+                shutil.move(src_path, dst_path)
+                print(f'Moved: {filename}')
+
+    except Exception as e:
+        print(f"An error occured: {str(e)}")
+
+
+def sort_images(folder, image_path, output_folder):
+    # Load images from a folder
+    image_list = Load_Data().from_folder([folder])
+
+    # Set up the search engine, you can load
+    st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=265)
+
+    # Index the iamges
+    st.run_index()
+
+    # Get metadata
+    metadata = st.get_image_metadata_file()
+
+    # Get similar images
+    similar_images_dict = st.get_similar_images(image_path=image_path, number_of_images=50)
+
+    # Move similar images to the output folder
+    for image_path in similar_images_dict.values():
+        # Check if file exists before attempting to move
+        if os.path.exists(image_path):
+            # Construct the destination path safely
+            dst_path = os.path.join(output_folder, os.path.basename(image_path))
+            print(f'Moving {image_path} to {dst_path}')  # Debugging
+            shutil.move(image_path, dst_path)
+
+            # Check for corresponding .txt file
+            txt_file_path = os.path.splitext(image_path)[0] + '.txt'
+            if os.path.exists(txt_file_path):
+                dst_txt_path = os.path.join(output_folder, os.path.basename(txt_file_path))
+                print(f'Moving {txt_file_path} to {dst_txt_path}')  # Debugging output
+                shutil.move(txt_file_path, dst_txt_path)
+
+        else:
+            print(f'File not found: {image_path}')
+
+
 def exit_application():
     user_input = input("Are you sure you want to exit? (Y/N): ").strip().lower()
 
@@ -140,93 +230,151 @@ def exit_application():
 
 
 def main():
-    # Ask the user for their choice
-    print("Select a function:")
-    print("1. Process a video file into scenes with captions")
-    print("2. Generate captions for a folder of images")
-    print("3. Amend existing captions with new text")
-    print("4. Resize and crop images and videos")
-    print("5. Exit")
+    while True:
+        # Display the menu
+        print("\n" + "-" * 30)
+        print("{:^30}".format("DATASET PREPROCESSOR MENU"))
+        print("-" * 30 + "\n")
 
-    choice = input("Enter the number of your choice: ")
+        print("Select a function:")
+        print("\n")
 
-    # Convert the user's input to an integer
-    choice = int(choice)
+        print("-" * 60)
+        cprint("    MAIN FUNCTIONS", "light_green", "on_black")
+        print("-" * 60)
+        cprint("1. Process a video file into scenes with captions", "light_green", "on_black")
+        cprint("2. Generate captions for a folder of images", "light_green", "on_black")
 
-    # Use conditional statements to call the selected functions
-    if choice == 1:
-        # Prompt user for input video file path and output folder path.
-        input_video_path = input("Enter the path to the input video file: ")
-        output_folder = input("Enter the path to the output folder: ")
-        num_images = input("Enter the number of still frames to be saved: ")
+        print("-" * 60)
+        cprint("    CAPTIONING TOOLS", "yellow", "on_black")
+        print("-" * 60)
+        cprint("3. Amend existing captions with new text", "yellow", "on_black")
+        cprint("4. Check images have captions", "yellow", "on_black")
 
-        # Try to convert the user input into an integer
-        try:
-            num_images = int(num_images)
-        except ValueError:
-            print("Invalid input. Please enter an integer")
+        print("-" * 60)
+        cprint("    VIDEO TOOLS", "light_blue", "on_black")
+        print("-" * 60)
+        cprint("5. Resize and crop images and videos", "light_blue", "on_black")
+        cprint("6. Check for duplicate files and move to a new folder", "light_blue", "on_black")
+        cprint("7. Sort similar looking images and move to a new folder", "light_blue", "on_black")
+
+        print("-" * 60 + "\n")
+        cprint("0. Exit", "red", "on_black")
+        print("\n")
+
+        choice = input("Enter the number of your choice: ")
+
+        # Convert the user's input to an integer
+        choice = int(choice)
+
+        # Use conditional statements to call the selected functions
+        if choice == 1:
+            # Prompt user for input video file path and output folder path.
+            input_video_path = input("Enter the path to the input video file: ")
+            output_folder = input("Enter the path to the output folder: ")
+            num_images = input("Enter the number of still frames to be saved: ")
+
+            # Try to convert the user input into an integer
+            try:
+                num_images = int(num_images)
+            except ValueError:
+                print("Invalid input. Please enter an integer")
+                main()
+
+            # Extract the input video file name without extension and add to output path.
+            video_name_without_extension = os.path.splitext(os.path.basename(input_video_path))[0]
+            output_subfolder = os.path.join(output_folder, video_name_without_extension)
+
+            # Create 'videos' and 'images' subfolders in the output folder.
+            videos_folder = os.path.join(output_subfolder, 'videos')
+            images_folder = os.path.join(output_subfolder, 'images')
+            os.makedirs(videos_folder, exist_ok=True)
+            os.makedirs(images_folder, exist_ok=True)
+
+            # Run video splitting function.
+            split_video_into_scenes(input_video_path, videos_folder, images_folder, num_images)
+            print("Scene splitting and image extraction completed.")
+
+            # Run captioning function.
+            caption_video_images(images_folder)
+            print(f"Generated captions for video images and saved to {images_folder}")
             main()
+        elif choice == 2:
+            # Define the folder path containing the images
+            folder_path = input("Enter the path to the folder containing images: ")
 
-        # Extract the input video file name without extension and add to output path.
-        video_name_without_extension = os.path.splitext(os.path.basename(input_video_path))[0]
-        output_subfolder = os.path.join(output_folder, video_name_without_extension)
+            # Run captioning function.
+            caption_video_images(folder_path)
+            print(f"Generated captions for video images and saved to {folder_path}")
+            main()
+        elif choice == 3:
+            # Prompt user for input folder and text input
+            folder_location = input("Enter the folder location: ")
+            text_to_append = input("Enter the text to append to each .txt file: ")
+            append_position = input("Append as 'prefix' or 'suffix'? ").lower()
 
-        # Create 'videos' and 'images' subfolders in the output folder.
-        videos_folder = os.path.join(output_subfolder, 'videos')
-        images_folder = os.path.join(output_subfolder, 'images')
-        os.makedirs(videos_folder, exist_ok=True)
-        os.makedirs(images_folder, exist_ok=True)
+            # Run caption amend function
+            amend_captions(folder_location, text_to_append, append_position)
+            print("All .txt caption files have been edited and saved.")
+            main()
+        elif choice == 4:
+            # Prompt the user for input folder
+            directory = input("Enter the path to the folder of images to check: ")
 
-        # Run video splitting function.
-        split_video_into_scenes(input_video_path, videos_folder, images_folder, num_images)
-        print("Scene splitting and image extraction completed.")
+            if not os.path.isdir(directory):
+                print(f"'{directory}' is not a valid directory.")
+            else:
+                missing_files = check_captions(directory)
 
-        # Run captioning function.
-        caption_video_images(images_folder)
-        print(f"Generated captions for video images and saved to {images_folder}")
-        main()
-    elif choice == 2:
-        # Define the folder path containing the images
-        folder_path = input("Enter the path to the folder containing images: ")
+                if not missing_files:
+                    print("All .png files have a caption file.")
+                else:
+                    print("The following .png files don't have caption files: ")
+                    for f in missing_files:
+                        print(f" - {f}")
+            main()
+        elif choice == 5:
+            images_folder = input("Enter the images folder path: ")
+            videos_folder = input("Enter the videos folder path: ")
 
-        # Run captioning function.
-        caption_video_images(folder_path)
-        print(f"Generated captions for video images and saved to {folder_path}")
-        main()
-    elif choice == 3:
-        # Prompt user for input folder and text input
-        folder_location = input("Enter the folder location: ")
-        text_to_append = input("Enter the text to append to each .txt file: ")
-        append_position = input("Append as 'prefix' or 'suffix'? ").lower()
+            # Create subfolders for images and videos
+            image_subfolders = ["576x320", "1024x576"]
+            video_subfolders = ["576x320", "1024x576"]
 
-        # Run caption amend function
-        amend_captions(folder_location, text_to_append, append_position)
-        print("All .txt caption files have been edited and saved.")
-        main()
-    elif choice == 4:
-        images_folder = input("Enter the images folder path: ")
-        videos_folder = input("Enter the videos folder path: ")
+            create_subfolders(images_folder, image_subfolders)
+            create_subfolders(videos_folder, video_subfolders)
 
-        # Create subfolders for images and videos
-        image_subfolders = ["576x320", "1024x576"]
-        video_subfolders = ["576x320", "1024x576"]
+            low_resolution = [576, 320]
+            high_resolution = [1024, 576]
 
-        create_subfolders(images_folder, image_subfolders)
-        create_subfolders(videos_folder, video_subfolders)
+            # Process images and videos separately
+            resize_and_crop(images_folder, os.path.join(images_folder, "576x320"), low_resolution)
+            resize_and_crop(images_folder, os.path.join(images_folder, "1024x576"), high_resolution)
+            resize_and_crop(videos_folder, os.path.join(videos_folder, "576x320"), low_resolution)
+            resize_and_crop(videos_folder, os.path.join(videos_folder, "1024x576"), high_resolution)
+            main()
+        elif choice == 6:
+            # Prompt the user for the folder paths
+            input_folder = input("Enter the path for the folder containing the images to compare: ").strip()
+            compare_folder = input("Enter the path for the folder to compare: ").strip()
+            output_folder = input("Enter the folder where the matching files should be moved: ").strip()
 
-        low_resolution = [576, 320]
-        high_resolution = [1024, 576]
+            move_duplicate_files(input_folder, compare_folder, output_folder)
+            main()
+        elif choice == 7:
+            # Prompt the user for folder paths
+            folder = input("Enter the path to the folder to check: ")
+            target_image = input("Enter the filename of the image to match: ")
+            output_folder = input("Enter the path of the folder to output to: ")
 
-        # Process images and videos separately
-        resize_and_crop(images_folder, os.path.join(images_folder, "576x320"), low_resolution)
-        resize_and_crop(images_folder, os.path.join(images_folder, "1024x576"), high_resolution)
-        resize_and_crop(videos_folder, os.path.join(videos_folder, "576x320"), low_resolution)
-        resize_and_crop(videos_folder, os.path.join(videos_folder, "1024x576"), high_resolution)
-        main()
-    elif choice == 5:
-        exit_application()
-    else:
-        print("Invalid choice. Please select a valid option.")
+            sort_images(folder, target_image, output_folder)
+            main()
+        elif choice == 0:
+            print("Exiting the program.")
+            # exit_application()
+            break
+        else:
+            print("Invalid choice. Please select a valid option.")
 
 
 if __name__ == "__main__":

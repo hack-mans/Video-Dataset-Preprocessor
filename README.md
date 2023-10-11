@@ -1,19 +1,20 @@
 # Video-Dataset-Preprocessor
 
-Python environment + script for preprocessing video files into scenes with captions
-(using BLIP2 - https://huggingface.co/Salesforce/blip2-opt-2.7b - requires ~13GB VRAM).
+Python environment + script for preprocessing video files into scenes with captions (using BLIP2 - https://huggingface.co/Salesforce/blip2-opt-2.7b - requires ~13GB VRAM).
 Also featuring the ability to amend caption files to add new text as prefix or suffix, and automatically crop and resize video clips into 576x320 and 1024x576 resolutions.
 
 Menu:
 - 1 Process a video file into scenes with captions
 - 2 Generate captions for a folder of images
 - 3 Amend existing captions with new text
-- 4 Resize and crop images and videos
-- 5 Exit
+- 4 Check images have captions
+- 5 Resize and crop images and videos
+- 6 Check for duplicate files and move to a new folder
+- 7 Sort similar looking images and move to a new folder
+- 0 Exit
 
 ## Instructions
-Requires FFMPEG so make sure you have installed a version locally.
-https://ffmpeg.org/download.html
+Requires FFPMEG so make sure you have installed a version locally.
 
 - From Command Line, clone the repo and setup the virtual environment
 ```
@@ -25,9 +26,11 @@ virtualenv venv
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 pip install git+https://github.com/huggingface/transformers.git
 pip install scenedetect[opencv] --upgrade
+pip install DeepImageSearch --upgrade
+pip install --upgrade termcolor
 ```
 - Place video files in root directory
-- Run the python script and provide the file names / paths when asked
+- Run the python script and provide the file paths when asked
 ```
 python ProcessDataset.py
 ```
